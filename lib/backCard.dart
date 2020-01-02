@@ -1,7 +1,10 @@
+import 'package:elare/OddEven.dart';
 import 'package:flutter/material.dart';
 
 Positioned backCard(
-  String url,
+  //String url,
+  DecorationImage img,
+  String sum,
   double bottom,
   double right,
   double left,
@@ -23,69 +26,41 @@ Positioned backCard(
       child: new Container(
         alignment: Alignment.center,
         width: screenSize.width / 1.2 + cardWidth,
-        height: screenSize.height / 1.7,
+        height: screenSize.height / 2,
         decoration: new BoxDecoration(
           color: new Color.fromRGBO(121, 114, 173, 1.0),
           borderRadius: new BorderRadius.circular(8.0),
+          //border: Border.all(width: 0.2),
         ),
         child: new Column(
           children: <Widget>[
             new Container(
               width: screenSize.width / 1.2 + cardWidth,
-              height: screenSize.height / 2.2,
+              height: screenSize.height / 2,
               decoration: new BoxDecoration(
                 borderRadius: new BorderRadius.only(
                     topLeft: new Radius.circular(8.0),
                     topRight: new Radius.circular(8.0)),
-                image: new DecorationImage(
+                image: sum != null ? null : img,
+                /*  new DecorationImage(
                   image: NetworkImage(url),
                   fit: BoxFit.cover,
-                ),
+                ), */
               ),
+              child: sum != null
+                  ? Center(
+                      child: Text(
+                        sum,
+                        style: new TextStyle(
+                          fontSize: 24.0,
+                          letterSpacing: 3.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : null,
             ),
-            new Container(
-                width: screenSize.width / 1.2 + cardWidth,
-                height: screenSize.height / 1.7 - screenSize.height / 2.2,
-                alignment: Alignment.center,
-                child: new Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: <Widget>[
-                    new FlatButton(
-                        padding: new EdgeInsets.all(0.0),
-                        onPressed: () {},
-                        child: new Container(
-                          height: 60.0,
-                          width: 130.0,
-                          alignment: Alignment.center,
-                          decoration: new BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: new BorderRadius.circular(60.0),
-                          ),
-                          child: new Text(
-                            "DON'T",
-                            style: new TextStyle(color: Colors.white),
-                          ),
-                        )),
-                    new FlatButton(
-                        padding: new EdgeInsets.all(0.0),
-                        onPressed: () {
-                          print("Here");
-                        },
-                        child: new Container(
-                          height: 60.0,
-                          width: 130.0,
-                          alignment: Alignment.center,
-                          decoration: new BoxDecoration(
-                            color: Colors.cyan,
-                            borderRadius: new BorderRadius.circular(60.0),
-                          ),
-                          child: new Text(
-                            "I'M IN",
-                            style: new TextStyle(color: Colors.white),
-                          ),
-                        ))
-                  ],
-                ))
           ],
         ),
       ),
