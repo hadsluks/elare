@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elare/frontCard.dart';
+import 'package:elare/tapToStartButton.dart';
 import 'package:elare/timer.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -26,9 +27,11 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
   List<DecorationImage> allImages = new List();
   List<DecorationImage> images = new List();
   List selectedData = [];
-  GameTimer t = new GameTimer();
+  GameTimer t;
   int score = 0;
-  bool clicked = false, firstlick = false, isBoy = false;
+  bool start = false, genderAsked = false, isBoy = false, finalStart = false;
+  bool gameOver = false;
+  int mode = 1;
   void addUrls() {
     if (allImages.length > firstImage + 3)
       images = allImages.sublist(firstImage, firstImage + 4).reversed.toList();
@@ -77,6 +80,10 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
 
   void initState() {
     super.initState();
+    t = GameTimer(
+      gameOver: onGameOver,
+      gameMode: mode,
+    );
     getUrls();
     _buttonController = new AnimationController(
       duration: new Duration(milliseconds: 1000),
@@ -164,24 +171,142 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
       score++;
     images.removeLast();
     firstImage++;
-    addUrls();
+    if (score < 0) {
+      t.stop();
+      gameOver = true;
+      setState(() {});
+    } else
+      addUrls();
   }
 
   swipeLeft() {
-    print(firstImage);
     if (names[cf].contains("b"))
       score++;
     else
       score--;
     images.removeLast();
     firstImage++;
-    addUrls();
+    if (score < 0) {
+      t.stop();
+      gameOver = true;
+      setState(() {});
+    } else
+      addUrls();
   }
 
   onClicked() {
     setState(() {
-      clicked = true;
+      start = true;
     });
+  }
+
+  onGameOver() {
+    setState(() {
+      gameOver = true;
+    });
+  }
+
+  void newGame() {
+    firstImage = 0;
+    addUrls();
+    score = 0;
+    gameOver = false;
+    start = false;
+    genderAsked = false;
+    isBoy = false;
+    finalStart = false;
+    t.reset();
+    setState(() {});
+  }
+
+  void themeDialog(BuildContext c) {
+    AlertDialog ad = new AlertDialog(
+      title: Text("Select Theme"),
+      actions: <Widget>[
+        RaisedButton(
+          onPressed: () {
+            Navigator.of(context).pushNamed("boygirl");
+          },
+          child: Text(
+            "Boy-Girl",
+            style: TextStyle(
+              fontSize: 20,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
+        RaisedButton(
+          onPressed: () {
+            Navigator.of(context).pushNamed('oddeven');
+          },
+          child: Text(
+            "Odd-Even",
+            style: TextStyle(
+              fontSize: 20,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+        )
+      ],
+    );
+    showDialog(
+      context: c,
+      builder: (c) => ad,
+    );
+  }
+
+  void modeDialog(BuildContext c) {
+    AlertDialog ad = new AlertDialog(
+      title: Text("Select Theme"),
+      actions: <Widget>[
+        RaisedButton(
+          onPressed: () {
+            mode = 1;
+            t.stop();
+            t.modeChange(mode);
+            Navigator.of(context).pop();
+            newGame();
+            //setState(() {});
+          },
+          child: Text(
+            "EndLess",
+            style: TextStyle(
+              fontSize: 20,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
+        RaisedButton(
+          onPressed: () {
+            mode = 2;
+            t.stop();
+            t.modeChange(mode);
+            Navigator.of(context).pop();
+            newGame();
+            //setState(() {});
+          },
+          child: Text(
+            "Timed",
+            style: TextStyle(
+              fontSize: 20,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+        )
+      ],
+    );
+    showDialog(
+      context: c,
+      builder: (c) => ad,
+    );
   }
 
   @override
@@ -190,20 +315,24 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
     var dataLength = images.length;
     double backCardPosition = initialBottom + (dataLength - 1) * 10 + 10;
     double backCardWidth = -10.0;
+    if (dataLength == 0) {
+      t.stop();
+      gameOver = true;
+    }
     List<Widget> screenItems = [
       GestureDetector(
         onTap: () {
           print(1111);
           setState(() {
-            clicked = true;
+            //start = true;
           });
         },
         child: new Container(
           color: new Color.fromRGBO(106, 94, 175, 1.0),
           alignment: Alignment.center,
-          child: dataLength > 0
+          child: dataLength > 0 && !gameOver
               ? Opacity(
-                  opacity: clicked ? 1 : 1,
+                  opacity: start ? 1 : 0.2,
                   child: new Stack(
                     alignment: AlignmentDirectional.center,
                     children: images.map((i) {
@@ -225,6 +354,7 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
                           swipeRight,
                           swipeLeft,
                           onClicked,
+                          !start,
                         );
                       } else {
                         backCardPosition = backCardPosition - 10;
@@ -245,14 +375,45 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
                   ),
                 )
               : Center(
-                  child: Text(
-                    "Game Over",
-                    style: new TextStyle(
-                      fontSize: 28.0,
-                      letterSpacing: 3.5,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        "Game Over\nYour Score: $score",
+                        style: new TextStyle(
+                          fontSize: 28.0,
+                          letterSpacing: 3.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      gameOver
+                          ? new FlatButton(
+                              padding: new EdgeInsets.all(0.0),
+                              onPressed: newGame,
+                              child: new Container(
+                                height: MediaQuery.of(context).size.height / 18,
+                                width: MediaQuery.of(context).size.width / 4,
+                                alignment: Alignment.center,
+                                decoration: new BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: new BorderRadius.circular(60.0),
+                                ),
+                                child: new Text(
+                                  "New Game",
+                                  textAlign: TextAlign.center,
+                                  style: new TextStyle(
+                                    color: Colors.white,
+                                    fontSize:
+                                        MediaQuery.of(context).size.width /
+                                            22.5,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : SizedBox(),
+                    ],
                   ),
                 ),
         ),
@@ -270,12 +431,12 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
             ),
           ), */
     ];
-    /*if (!clicked)
+    if (start && !finalStart)
       screenItems.add(
         Container(
           color: new Color.fromRGBO(106, 94, 175, 1.0),
           child: Center(
-            child: firstlick
+            child: genderAsked
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -297,7 +458,8 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
                         onPressed: () {
                           //addUrls();
                           setState(() {
-                            clicked = true;
+                            finalStart = true;
+                            t.start();
                           });
                         },
                         child: Text(
@@ -333,7 +495,7 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
                             onPressed: () {
                               addUrls();
                               setState(() {
-                                firstlick = true;
+                                genderAsked = true;
                                 isBoy = true;
                               });
                             },
@@ -353,7 +515,7 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
                             onPressed: () {
                               addUrls();
                               setState(() {
-                                firstlick = true;
+                                genderAsked = true;
                                 isBoy = false;
                               });
                             },
@@ -375,7 +537,15 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
                   ),
           ),
         ),
-      );*/
+      );
+
+    if (!start) {
+      screenItems.add(
+        TapToStartButton(
+          onClicked: onClicked,
+        ),
+      );
+    }
     return new Scaffold(
         /*appBar: new AppBar(
           elevation: 0.0,
@@ -434,116 +604,98 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
           ),
         ),*/
         body: Container(
-          child: Column(
-            children: <Widget>[
-              Expanded(
-                child: Stack(
-                  children: screenItems,
-                ),
-              ),
-              Container(
-                alignment: Alignment.center,
-                color: Color.fromRGBO(106, 94, 174, 1.0),
-                padding: EdgeInsets.symmetric(vertical: 5),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: <Widget>[
-                    t,
-                    new FlatButton(
-                      padding: new EdgeInsets.all(0.0),
-                      onPressed: () {
-                        t.start();
-                      },
-                      child: new Container(
-                        height: MediaQuery.of(context).size.height / 18,
-                        width: MediaQuery.of(context).size.width / 4,
-                        alignment: Alignment.center,
-                        decoration: new BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: new BorderRadius.circular(60.0),
-                        ),
-                        child: new Text(
-                          "START",
-                          style: new TextStyle(
-                            color: Colors.white,
-                            fontSize: MediaQuery.of(context).size.width / 22.5,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                alignment: Alignment.center,
-                color: Color.fromRGBO(106, 94, 173, 1.0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: <Widget>[
-                    new FlatButton(
-                      padding: new EdgeInsets.all(0.0),
-                      onPressed: () {
-                        Navigator.of(context).popAndPushNamed('oddeven');
-                      },
-                      child: new Container(
-                        height: MediaQuery.of(context).size.height / 18,
-                        width: MediaQuery.of(context).size.width / 4,
-                        alignment: Alignment.center,
-                        decoration: new BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: new BorderRadius.circular(60.0),
-                        ),
-                        child: new Text(
-                          "THEME",
-                          style: new TextStyle(
-                            color: Colors.white,
-                            fontSize: MediaQuery.of(context).size.width / 22.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    new FlatButton(
-                      padding: new EdgeInsets.all(0.0),
-                      onPressed: () {},
-                      child: new Container(
-                        height: MediaQuery.of(context).size.height / 18,
-                        width: MediaQuery.of(context).size.width / 4,
-                        alignment: Alignment.center,
-                        decoration: new BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: new BorderRadius.circular(60.0),
-                        ),
-                        child: new Text(
-                          "MODE",
-                          style: new TextStyle(
-                            color: Colors.white,
-                            fontSize: MediaQuery.of(context).size.width / 22.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.all(10),
-                color: new Color.fromRGBO(106, 94, 175, 1.0),
-                alignment: Alignment.center,
-                child: Text(
-                  "SCORE: $score",
-                  style: new TextStyle(
-                    color: Colors.white,
-                    fontSize: 28.0,
-                    letterSpacing: 3.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Expanded(
+            child: Stack(
+              fit: StackFit.loose,
+              children: screenItems,
+            ),
           ),
-        ));
+          Container(
+            alignment: Alignment.center,
+            color: Color.fromRGBO(106, 94, 174, 1.0),
+            padding: EdgeInsets.symmetric(vertical: 5),
+            child: t,
+          ),
+          !start
+              ? Container(
+                  alignment: Alignment.center,
+                  color: Color.fromRGBO(106, 94, 173, 1.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: <Widget>[
+                      new FlatButton(
+                        padding: new EdgeInsets.all(0.0),
+                        onPressed: () {},
+                        child: new Container(
+                          height: MediaQuery.of(context).size.height / 18,
+                          width: MediaQuery.of(context).size.width / 4,
+                          alignment: Alignment.center,
+                          decoration: new BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: new BorderRadius.circular(60.0),
+                          ),
+                          child: new Text(
+                            "Theme : BoyGirl",
+                            textAlign: TextAlign.center,
+                            style: new TextStyle(
+                              color: Colors.white,
+                              fontSize:
+                                  MediaQuery.of(context).size.width / 22.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      new FlatButton(
+                        padding: new EdgeInsets.all(0.0),
+                        onPressed: () {
+                          modeDialog(context);
+                        },
+                        child: new Container(
+                          height: MediaQuery.of(context).size.height / 18,
+                          width: MediaQuery.of(context).size.width / 4,
+                          alignment: Alignment.center,
+                          decoration: new BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: new BorderRadius.circular(60.0),
+                          ),
+                          child: new Text(
+                            "Mode : " + (mode == 1 ? "EndLess" : "Timed"),
+                            textAlign: TextAlign.center,
+                            style: new TextStyle(
+                              color: Colors.white,
+                              fontSize:
+                                  MediaQuery.of(context).size.width / 22.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : SizedBox(),
+          dataLength > 0 && !gameOver
+              ? Container(
+                  padding: EdgeInsets.all(10),
+                  color: new Color.fromRGBO(106, 94, 175, 1.0),
+                  alignment: Alignment.center,
+                  child: Text(
+                    "SCORE: $score",
+                    style: new TextStyle(
+                      color: Colors.white,
+                      fontSize: 28.0,
+                      letterSpacing: 3.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              : SizedBox()
+        ],
+      ),
+    ));
   }
 }

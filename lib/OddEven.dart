@@ -251,6 +251,7 @@ class _OddEvenState extends State<OddEven> with TickerProviderStateMixin {
                           swipeRight,
                           swipeLeft,
                           onClicked,
+                          null,
                         );
                       } else {
                         backCardPosition = backCardPosition - 10;

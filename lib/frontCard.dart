@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:elare/OddEven.dart';
 import 'package:flutter/material.dart';
 
@@ -19,7 +20,8 @@ Positioned frontCard(
     Function addImg,
     Function swipeRight,
     Function swipeLeft,
-    Function onClicked) {
+    Function onClicked,
+    bool toBlur) {
   Size screenSize = MediaQuery.of(context).size;
   return new Positioned(
     bottom: 100.0 + bottom,
@@ -82,7 +84,17 @@ Positioned frontCard(
                   child: GestureDetector(
                     onTap: onClicked,
                     child: sum == null
-                        ? null
+                        ? (toBlur
+                            ? BackdropFilter(
+                                filter: ImageFilter.blur(
+                                  sigmaX: 15,
+                                  sigmaY: 15,
+                                ),
+                                child: Container(
+                                  color: Colors.black.withOpacity(0),
+                                ),
+                              )
+                            : null)
                         : Text(
                             sum,
                             style: new TextStyle(
