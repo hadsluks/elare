@@ -18,7 +18,7 @@ class _TapToStartButtonState extends State<TapToStartButton> {
     tim = Timer.periodic(Duration(milliseconds: 500), (t) {
       if (tim.isActive) {
         op = !op;
-        setState(() {});
+        if (this.mounted) setState(() {});
       }
     });
   }

@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:flare_splash_screen/flare_splash_screen.dart' as spl;
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -7,7 +7,8 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   GlobalKey _scaffoldKey = new GlobalKey<ScaffoldState>();
   bool f = false;
   double op = 0.0;
@@ -29,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void stopTimer() {
     tim.cancel();
-    Navigator.of(context).pushNamed("boygirl");
+    Navigator.of(context).pushNamed("signup");
   }
 
   @override

@@ -1,9 +1,7 @@
-import 'package:elare/OddEven.dart';
 import 'package:flutter/material.dart';
 
 Positioned backCard(
-  //String url,
-  DecorationImage img,
+  String url,
   String sum,
   double bottom,
   double right,
@@ -18,8 +16,6 @@ Positioned backCard(
   // print("dummyCard");
   return new Positioned(
     bottom: 100.0 + bottom,
-    // right: flag == 0 ? right != 0.0 ? right : null : null,
-    //left: flag == 1 ? right != 0.0 ? right : null : null,
     child: new Card(
       color: Colors.transparent,
       elevation: 4.0,
@@ -41,7 +37,9 @@ Positioned backCard(
                 borderRadius: new BorderRadius.only(
                     topLeft: new Radius.circular(8.0),
                     topRight: new Radius.circular(8.0)),
-                image: sum != null ? null : img,
+                image: DecorationImage(
+                  image: NetworkImage(url),
+                ),
                 /*  new DecorationImage(
                   image: NetworkImage(url),
                   fit: BoxFit.cover,

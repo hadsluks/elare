@@ -1,19 +1,11 @@
 import 'dart:math';
 import 'dart:ui';
-import 'package:elare/OddEven.dart';
 import 'package:flutter/material.dart';
 
 Positioned frontCard(
     //String url,
-    String index,
-    DecorationImage img,
-    String sum,
-    double bottom,
-    double right,
-    double left,
+    String url,
     double cardWidth,
-    double rotation,
-    double skew,
     BuildContext context,
     Function dismissImg,
     int flag,
@@ -24,20 +16,10 @@ Positioned frontCard(
     bool toBlur) {
   Size screenSize = MediaQuery.of(context).size;
   return new Positioned(
-    bottom: 100.0 + bottom,
-    right: flag == 0 ? right != 0.0 ? right : null : null,
-    left: flag == 1 ? right != 0.0 ? right : null : null,
+    bottom: 100.0,
     child: new Dismissible(
-      key: new Key(index.toString()),
+      key: new Key(url),
       crossAxisEndOffset: -0.3,
-      onResize: () {
-        //print("here");
-        // setState(() {
-        //   var i = data.removeLast();
-
-        //   data.insert(0, i);
-        // });
-      },
       onDismissed: (DismissDirection direction) {
 //          _swipeAnimation();
         if (direction == DismissDirection.endToStart) {
@@ -49,61 +31,22 @@ Positioned frontCard(
         }
       },
       child: new Transform(
-        alignment: flag == 0 ? Alignment.bottomRight : Alignment.bottomLeft,
-        //transform: null,
-        transform: new Matrix4.skewX(skew),
-        //..rotateX(-math.pi / rotation),
-        child: new RotationTransition(
-          turns: new AlwaysStoppedAnimation(
-              flag == 0 ? rotation / 360 : -rotation / 360),
-          child: new Hero(
-            tag: "img",
-            child: new GestureDetector(
-              onTap: () {
-                // Navigator.push(
-                //     context,
-                //     new MaterialPageRoute(
-                //         builder: (context) => new DetailPage(type: img)));
-                /* Navigator.of(context).push(new PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => new DetailPage(type: img),
-                    )); */
-              },
-              child: new Card(
-                color: Colors.transparent,
-                elevation: 10.0,
-                child: new Container(
-                  alignment: Alignment.center,
-                  width: screenSize.width / 1.2 + cardWidth,
-                  height: screenSize.height / 2,
-                  decoration: new BoxDecoration(
-                    color: Color.fromRGBO(121, 114, 173, 1.0),
-                    borderRadius: new BorderRadius.circular(8.0),
-                    border: Border.all(width: 0.2),
-                    image: sum == null ? img : null,
-                  ),
-                  child: GestureDetector(
-                    onTap: onClicked,
-                    child: sum == null
-                        ? (toBlur
-                            ? BackdropFilter(
-                                filter: ImageFilter.blur(
-                                  sigmaX: 15,
-                                  sigmaY: 15,
-                                ),
-                                child: Container(
-                                  color: Colors.black.withOpacity(0),
-                                ),
-                              )
-                            : null)
-                        : Text(
-                            sum,
-                            style: new TextStyle(
-                              fontSize: 24.0,
-                              letterSpacing: 3.5,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+        transform: new Matrix4.skewX(0.0),
+        child: new Hero(
+          tag: "img",
+          child: new GestureDetector(
+            child: new Card(
+              color: Colors.transparent,
+              elevation: 10.0,
+              child: new Container(
+                alignment: Alignment.center,
+                width: screenSize.width / 1.2 + cardWidth,
+                height: screenSize.height / 2,
+                decoration: new BoxDecoration(
+                  borderRadius: new BorderRadius.circular(8.0),
+                  border: Border.all(width: 0.2),
+                  image: DecorationImage(
+                    image: NetworkImage(url),
                   ),
                 ),
               ),

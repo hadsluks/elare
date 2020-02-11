@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:elare/frontCard.dart';
@@ -7,9 +8,12 @@ import 'package:elare/timer.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_swiper/flutter_swiper.dart';
+import 'package:elare/classes.dart' as cl;
 import 'backCard.dart';
 
 class BoyGirl extends StatefulWidget {
+  final cl.ThemeData th;
+  BoyGirl({this.th});
   @override
   State<StatefulWidget> createState() {
     return _BoyGirlState();
@@ -17,65 +21,115 @@ class BoyGirl extends StatefulWidget {
 }
 
 class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
-  AnimationController _buttonController;
-  Animation<double> rotate;
-  Animation<double> right;
-  Animation<double> bottom;
-  Animation<double> width;
-  int flag = 0, firstImage = 0, cf;
-  List<String> names = new List();
-  List<DecorationImage> allImages = new List();
-  List<DecorationImage> images = new List();
-  List selectedData = [];
+  String userName = "harsh";
+  var firestore = Firestore.instance;
   GameTimer t;
-  int score = 0;
-  bool start = false, genderAsked = false, isBoy = false, finalStart = false;
-  bool gameOver = false;
-  int mode = 1;
-  void addUrls() {
-    if (allImages.length > firstImage + 3)
-      images = allImages.sublist(firstImage, firstImage + 4).reversed.toList();
-    //urls = allUrls.sublist(firstImage, firstImage + 4).reversed.toList();
-    if (images.isNotEmpty) cf = allImages.indexOf(images.last);
-    setState(() {});
-  }
+  int score = 0, score1 = 0;
+  List<bool> swipes = new List(), ifAddPred = new List();
+  List<DocumentReference> refs = new List();
+  List<int> imageIds = new List();
+  List<cl.ImageData> image = new List();
+  bool gameOver = false, start = false;
+  int mode = 1, ci, fetchedImages = 0;
+  List<String> imageNames = new List(), left = new List(), right = new List();
+  List<cl.DataImage> images = new List();
+  List<NetworkImage> netImages = new List();
+  List<cl.DataTheme> themes = new List();
+  int dismissedImage = 0;
 
-  void getUrls() async {
-    List n = [
-      "g1.jpg",
-      "g2.jpg",
-      "g3.jpg",
-      "g4.jpg",
-      "g5.jpg",
-      "g6.jpg",
-      "g7.jpg",
-      "g8.jpg",
-      "g9.jpg",
-      "g10.jpg",
-    ];
-    allImages = new List<DecorationImage>.generate(10, (i) {
-      names.add(n[i]);
-      return DecorationImage(
-        fit: BoxFit.fill,
-        image: AssetImage("assets/" + n[i]),
-      );
-    });
-    addUrls();
-    Firestore.instance.collection('images').snapshots().listen((d) {
-      d.documents.forEach((doc) async {
-        final url = await FirebaseStorage.instance
-            .ref()
-            .child(doc['name'] + '.jpg')
-            .getDownloadURL();
-        allImages.add(
-          new DecorationImage(
-            image: new NetworkImage(url),
-            fit: BoxFit.cover,
-          ),
-        );
-        names.add(doc['name']);
+  void getImages() async {
+    image = new List();
+    swipes = new List();
+    ifAddPred = new List();
+    refs = new List();
+    imageIds = new List();
+    firestore.collection('Theme${widget.th.key}').getDocuments().then((doc) {
+      doc.documents.forEach((d) {
+        var img = new cl.ImageData().fromMap(d.data);
+        image.add(img);
+        swipes.add(false);
+        ifAddPred.add(false);
+        refs.add(d.reference);
+        imageIds.add(img.imageId);
+        ci = swipes.length;
+        setState(() {});
       });
     });
+  }
+
+  void getImages1() async {
+    imageNames = new List();
+    firestore
+        .collection('user')
+        .where("userName", isEqualTo: 'harsh')
+        .getDocuments()
+        .then((d) async {
+      var data = d.documents.first.data;
+      List<dynamic> interests = data['interest'];
+      List<dynamic> th = new List();
+      for (int i = 0; i < interests.length; i++) {
+        await firestore
+            .collection('interest')
+            .where("interestID", isEqualTo: interests[i])
+            .getDocuments()
+            .then((d) {
+          var data = d.documents.first.data;
+          th += data['theme'];
+        });
+      }
+      List<dynamic> img = new List();
+      List<String> l1 = new List(), r1 = new List();
+      for (int i = 0; i < th.length; i++) {
+        await firestore
+            .collection('theme')
+            .where("themeID", isEqualTo: th[i])
+            .getDocuments()
+            .then((d) {
+          var data = d.documents.first.data;
+          var theme = new cl.DataTheme().fromMap(data);
+          themes.add(theme);
+          img += theme.images;
+          theme.images.forEach((i) {
+            l1.add(data['left']);
+            r1.add(data['right']);
+          });
+        });
+      }
+      var rnd = new Random();
+      for (int i = 0; i < img.length; i++) {
+        int k = rnd.nextInt(img.length);
+        while (img[k] == null) {
+          k = rnd.nextInt(img.length);
+        }
+        imageNames.add(img[k]);
+        left.add(l1[k]);
+        right.add(r1[k]);
+        img[k] = null;
+      }
+      fetchImgeUrls(5);
+    });
+  }
+
+  void fetchImgeUrls(int number) async {
+    for (int i = fetchedImages;
+        i < fetchedImages + number && i < imageNames.length;
+        i++) {
+      await firestore
+          .collection('images')
+          .where('imageID', isEqualTo: imageNames[i])
+          .getDocuments()
+          .then((d) {
+        var data = d.documents.first.data;
+        var im = new cl.DataImage().fromMap(data);
+        im.l = left[i];
+        im.r = right[i];
+        images.insert(0, im);
+        netImages.insert(0, NetworkImage(im.link));
+      });
+    }
+    ci = netImages.length;
+    fetchedImages += number;
+    setState(() {});
   }
 
   void initState() {
@@ -84,138 +138,67 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
       gameOver: onGameOver,
       gameMode: mode,
     );
-    getUrls();
-    _buttonController = new AnimationController(
-      duration: new Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    rotate = new Tween<double>(
-      begin: -0.0,
-      end: -40.0,
-    ).animate(
-      new CurvedAnimation(
-        parent: _buttonController,
-        curve: Curves.ease,
-      ),
-    );
-    rotate.addListener(() {
-      setState(() {
-        if (rotate.isCompleted) {
-          var i = images.removeLast();
-          images.insert(0, i);
-
-          _buttonController.reset();
-        }
-      });
-    });
-
-    right = new Tween<double>(
-      begin: 0.0,
-      end: 400.0,
-    ).animate(
-      new CurvedAnimation(
-        parent: _buttonController,
-        curve: Curves.ease,
-      ),
-    );
-    bottom = new Tween<double>(
-      begin: 15.0,
-      end: 100.0,
-    ).animate(
-      new CurvedAnimation(
-        parent: _buttonController,
-        curve: Curves.ease,
-      ),
-    );
-    width = new Tween<double>(
-      begin: 20.0,
-      end: 25.0,
-    ).animate(
-      new CurvedAnimation(
-        parent: _buttonController,
-        curve: Curves.bounceOut,
-      ),
-    );
+    getImages1();
   }
 
   @override
   void dispose() {
-    _buttonController.dispose();
     super.dispose();
   }
 
-  Future<Null> _swipeAnimation() async {
-    try {
-      await _buttonController.forward();
-    } on TickerCanceled {}
-  }
-
-  dismissImg(String url) {
-    setState(() {
-      images.remove(url);
-    });
-  }
-
-  addImg(DecorationImage img) {
-    setState(() {
-      //data.remove(img);
-      //selectedData.add(img);
-    });
-  }
-
-  swipeRight() {
-    if (names[cf].contains("b"))
-      score--;
+  swipeRight(int i) {
+    dismissedImage += 1;
+    fetchImgeUrls(1);
+    if (images[i].cc == "R")
+      score += 1;
     else
-      score++;
-    images.removeLast();
-    firstImage++;
-    if (score < 0) {
-      t.stop();
-      gameOver = true;
-      setState(() {});
-    } else
-      addUrls();
+      score -= 1;
+    if (score < 0) onGameOver();
+    setState(() {});
+    /* firestore.collection('swipes').document().setData({
+      'imageID': images[i].imageID,
+      'userName': 'harsh',
+      'swipe': "R",
+    }).then((_) {}); */
   }
 
-  swipeLeft() {
-    if (names[cf].contains("b"))
-      score++;
+  swipeLeft(int i) {
+    dismissedImage += 1;
+    fetchImgeUrls(1);
+    if (images[i].cc == "L")
+      score += 1;
     else
-      score--;
-    images.removeLast();
-    firstImage++;
-    if (score < 0) {
-      t.stop();
-      gameOver = true;
-      setState(() {});
-    } else
-      addUrls();
+      score -= 1;
+    if (score < 0) onGameOver();
+    setState(() {});
+    /* firestore.collection('swipes').document().setData({
+      'imageID': images[i].imageID,
+      'userName': 'harsh',
+      'swipe': "L",
+    }).then((_) {
+      images.removeAt(i);
+    }); */
   }
 
   onClicked() {
     setState(() {
       start = true;
+      t.start();
     });
   }
 
   onGameOver() {
-    setState(() {
-      gameOver = true;
-    });
+    t.stop();
+    gameOver = true;
   }
 
   void newGame() {
-    firstImage = 0;
-    addUrls();
     score = 0;
+    score1 = 0;
     gameOver = false;
-    start = false;
-    genderAsked = false;
-    isBoy = false;
-    finalStart = false;
     t.reset();
+    start = false;
+    getImages();
     setState(() {});
   }
 
@@ -309,71 +292,131 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
     );
   }
 
+  void giveleft() {}
+
   @override
   Widget build(BuildContext context) {
+    if (netImages.length >= 5) {
+      print(netImages[4]);
+      print(imageNames[4]);
+    }
     double initialBottom = 15.0;
-    var dataLength = images.length;
+    var dataLength = netImages.length;
     double backCardPosition = initialBottom + (dataLength - 1) * 10 + 10;
-    double backCardWidth = -10.0;
-    if (dataLength == 0) {
-      t.stop();
-      gameOver = true;
+    double backCardWidth = 10.0;
+    if (dataLength == 0 && start) {
+      onGameOver();
     }
     List<Widget> screenItems = [
       GestureDetector(
         onTap: () {
-          print(1111);
-          setState(() {
-            //start = true;
-          });
+          onClicked();
         },
         child: new Container(
-          color: new Color.fromRGBO(106, 94, 175, 1.0),
           alignment: Alignment.center,
-          child: dataLength > 0 && !gameOver
-              ? Opacity(
-                  opacity: start ? 1 : 0.2,
-                  child: new Stack(
-                    alignment: AlignmentDirectional.center,
-                    children: images.map((i) {
-                      if (images.indexOf(i) == dataLength - 1) {
-                        return frontCard(
-                          names[allImages.indexOf(i)],
-                          i,
-                          null,
-                          bottom.value,
-                          right.value,
-                          0.0,
-                          backCardWidth + 10,
-                          rotate.value,
-                          rotate.value < -10 ? 0.1 : 0.0,
-                          context,
-                          dismissImg,
-                          flag,
-                          addImg,
-                          swipeRight,
-                          swipeLeft,
-                          onClicked,
-                          !start,
-                        );
-                      } else {
-                        backCardPosition = backCardPosition - 10;
-                        backCardWidth = backCardWidth + 10;
-                        return backCard(
-                          i,
-                          null,
-                          backCardPosition,
-                          0.0,
-                          0.0,
-                          backCardWidth,
-                          0.0,
-                          0.0,
-                          context,
-                        );
-                      }
-                    }).toList(),
-                  ),
-                )
+          child: !gameOver
+              ? dataLength == 0
+                  ? Center(
+                      child: Container(
+                        padding: EdgeInsets.all(15),
+                        width: 200,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Text("Loading Game"),
+                            CircularProgressIndicator(),
+                          ],
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : Opacity(
+                      opacity: start ? 1 : 0.2,
+                      child: new Stack(
+                        alignment: AlignmentDirectional.center,
+                        children: netImages.sublist(0, 5).toList().map((i) {
+                          if (netImages.indexOf(i) == 4)
+                            return new Positioned(
+                              bottom: 100.0,
+                              child: Dismissible(
+                                onDismissed: (DismissDirection direction) {
+                                  ci -= 1;
+                                  if (direction ==
+                                      DismissDirection.endToStart) {
+                                    swipeLeft(netImages.indexOf(i));
+                                  } else {
+                                    swipeRight(netImages.indexOf(i));
+                                  }
+                                },
+                                key: Key(i.url),
+                                child: Card(
+                                  color: Colors
+                                      .transparent, //Color.fromRGBO(121, 114, 173, 1.0),
+                                  elevation: 10.0,
+                                  child: new Container(
+                                    alignment: Alignment.center,
+                                    width: MediaQuery.of(context).size.width /
+                                            1.2 +
+                                        backCardWidth,
+                                    height:
+                                        MediaQuery.of(context).size.height / 2,
+                                    decoration: new BoxDecoration(
+                                      borderRadius:
+                                          new BorderRadius.circular(8.0),
+                                      border: Border.all(width: 0.2),
+                                      image: DecorationImage(
+                                        image: i,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          else
+                            return Positioned(
+                              bottom: 100,
+                              child: Dismissible(
+                                onDismissed: (DismissDirection direction) {
+                                  ci -= 1;
+                                  if (direction ==
+                                      DismissDirection.endToStart) {
+                                    swipeLeft(netImages.indexOf(i));
+                                  } else {
+                                    swipeRight(netImages.indexOf(i));
+                                  }
+                                },
+                                key: Key(i.url),
+                                child: Card(
+                                  color: Colors
+                                      .transparent, //Color.fromRGBO(121, 114, 173, 1.0),
+                                  elevation: 10.0,
+                                  child: new Container(
+                                    alignment: Alignment.center,
+                                    width: MediaQuery.of(context).size.width /
+                                            1.2 +
+                                        backCardWidth,
+                                    height:
+                                        MediaQuery.of(context).size.height / 2,
+                                    decoration: new BoxDecoration(
+                                      borderRadius:
+                                          new BorderRadius.circular(8.0),
+                                      border: Border.all(width: 0.2),
+                                      image: DecorationImage(
+                                        image: i,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                        }).toList(),
+                      ),
+                    )
               : Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -387,159 +430,37 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
                           color: Colors.white,
                         ),
                       ),
-                      gameOver
-                          ? new FlatButton(
-                              padding: new EdgeInsets.all(0.0),
-                              onPressed: newGame,
-                              child: new Container(
-                                height: MediaQuery.of(context).size.height / 18,
-                                width: MediaQuery.of(context).size.width / 4,
-                                alignment: Alignment.center,
-                                decoration: new BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: new BorderRadius.circular(60.0),
-                                ),
-                                child: new Text(
-                                  "New Game",
-                                  textAlign: TextAlign.center,
-                                  style: new TextStyle(
-                                    color: Colors.white,
-                                    fontSize:
-                                        MediaQuery.of(context).size.width /
-                                            22.5,
-                                    letterSpacing: 2,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : SizedBox(),
+                      new FlatButton(
+                        padding: new EdgeInsets.all(0.0),
+                        onPressed: newGame,
+                        child: new Container(
+                          height: MediaQuery.of(context).size.height / 18,
+                          width: MediaQuery.of(context).size.width / 4,
+                          alignment: Alignment.center,
+                          decoration: new BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: new BorderRadius.circular(60.0),
+                          ),
+                          child: new Text(
+                            "New Game",
+                            textAlign: TextAlign.center,
+                            style: new TextStyle(
+                              color: Colors.white,
+                              fontSize:
+                                  MediaQuery.of(context).size.width / 22.5,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      )
                     ],
                   ),
                 ),
         ),
       ),
-
-      /* 
-          Container(
-            child: Text(
-              "Tap to Play..",
-              style: TextStyle(fontSize: 24),
-            ),
-            decoration: new BoxDecoration(
-              color: new Color.fromRGBO(120, 120, 162, 1.0),
-              borderRadius: new BorderRadius.circular(8.0),
-            ),
-          ), */
     ];
-    if (start && !finalStart)
-      screenItems.add(
-        Container(
-          color: new Color.fromRGBO(106, 94, 175, 1.0),
-          child: Center(
-            child: genderAsked
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: <Widget>[
-                      Container(
-                        margin: EdgeInsets.all(15),
-                        child: Text(
-                          isBoy
-                              ? "Heyyy, You know Girls are always \"RIGHT\"\n so you must follow \"LEFT\"."
-                              : "Heyyy, You know Girls are always \"RIGHT\"\n so Don\'t be  \"LEFT\" Out.",
-                          style: TextStyle(
-                            fontSize: 24,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      RaisedButton(
-                        onPressed: () {
-                          //addUrls();
-                          setState(() {
-                            finalStart = true;
-                            t.start();
-                          });
-                        },
-                        child: Text(
-                          isBoy ? "Ohhh!! Sureee :))" : "Ohhh!! Thanks!!",
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white,
-                          ),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        color: Colors.cyan,
-                      ),
-                    ],
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: <Widget>[
-                      Text(
-                        "Your Gender?",
-                        style: TextStyle(
-                            fontSize: 32,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        mainAxisSize: MainAxisSize.max,
-                        children: <Widget>[
-                          RaisedButton(
-                            onPressed: () {
-                              addUrls();
-                              setState(() {
-                                genderAsked = true;
-                                isBoy = true;
-                              });
-                            },
-                            child: Text(
-                              "Boy",
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            color: Colors.cyan,
-                          ),
-                          RaisedButton(
-                            onPressed: () {
-                              addUrls();
-                              setState(() {
-                                genderAsked = true;
-                                isBoy = false;
-                              });
-                            },
-                            child: Text(
-                              "Girl",
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            color: Colors.cyan,
-                          )
-                        ],
-                      )
-                    ],
-                  ),
-          ),
-        ),
-      );
 
-    if (!start) {
+    if (!start && dataLength > 0) {
       screenItems.add(
         TapToStartButton(
           onClicked: onClicked,
@@ -547,155 +468,174 @@ class _BoyGirlState extends State<BoyGirl> with TickerProviderStateMixin {
       );
     }
     return new Scaffold(
-        /*appBar: new AppBar(
-          elevation: 0.0,
-          backgroundColor: new Color.fromRGBO(106, 94, 175, 1.0),
-          centerTitle: true,
-          leading: new Container(
-            margin: const EdgeInsets.all(15.0),
-            child: new Icon(
-              Icons.equalizer,
-              color: Colors.cyan,
-              size: 30.0,
-            ),
-          ),
-          actions: <Widget>[
-            new GestureDetector(
-              onTap: () {
-                // Navigator.push(
-                //     context,
-                //     new MaterialPageRoute(
-                //         builder: (context) => new PageMain()));
-              },
-              child: new Container(
-                margin: const EdgeInsets.all(15.0),
-                child: new Icon(
-                  Icons.search,
-                  color: Colors.cyan,
-                  size: 30.0,
-                ),
-              ),
-            ),
-          ],
-          title: new Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+        backgroundColor: Colors.black,
+        body: Container(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              new Text(
-                "EVENTS",
-                style: new TextStyle(
-                  fontSize: 12.0,
-                  letterSpacing: 3.5,
-                  fontWeight: FontWeight.bold,
+              SizedBox(
+                height: MediaQuery.of(context).size.height / 15,
+              ),
+              Container(
+                alignment: Alignment.center,
+                color: Colors.black,
+                padding: EdgeInsets.symmetric(vertical: 5),
+                child: t,
+              ),
+              Expanded(
+                child: Stack(
+                  fit: StackFit.loose,
+                  children: screenItems,
                 ),
               ),
-              new Container(
-                width: 15.0,
-                height: 15.0,
-                margin: new EdgeInsets.only(bottom: 20.0),
-                alignment: Alignment.center,
-                child: new Text(
-                  dataLength.toString(),
-                  style: new TextStyle(fontSize: 10.0),
-                ),
-                decoration: new BoxDecoration(
-                    color: Colors.red, shape: BoxShape.circle),
-              )
+              dataLength > 0 && start
+                  ? Row(
+                      children: <Widget>[
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            height: 80,
+                            child: Center(
+                              child: Text(
+                                left[ci - dismissedImage],
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.red[300],
+                                  Colors.red[100],
+                                ],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.center,
+                              ),
+                              border: Border(
+                                right: BorderSide(
+                                  width: 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            height: 80,
+                            child: Center(
+                              child: Text(
+                                right[ci - dismissedImage],
+                                textAlign: TextAlign.end,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.green[100],
+                                  Colors.green[300],
+                                ],
+                                begin: Alignment.center,
+                                end: Alignment.centerRight,
+                              ),
+                              border: Border(
+                                right: BorderSide(
+                                  width: 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      ],
+                    )
+                  : SizedBox(),
+              dataLength > 0 && !gameOver
+                  ? Container(
+                      padding: EdgeInsets.all(10),
+                      alignment: Alignment.center,
+                      child: Text(
+                        "SCORE: $score",
+                        style: new TextStyle(
+                          color: Colors.white,
+                          fontSize: 28.0,
+                          letterSpacing: 3.5,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 1.0,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : SizedBox(),
+              /* !start
+                  ? Container(
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: <Widget>[
+                          new FlatButton(
+                            padding: new EdgeInsets.all(0.0),
+                            onPressed: () {},
+                            child: new Container(
+                              height: MediaQuery.of(context).size.height / 18,
+                              width: MediaQuery.of(context).size.width / 4,
+                              alignment: Alignment.center,
+                              decoration: new BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: new BorderRadius.circular(60.0),
+                              ),
+                              child: new Text(
+                                "Theme : BoyGirl",
+                                textAlign: TextAlign.center,
+                                style: new TextStyle(
+                                  color: Colors.white,
+                                  fontSize:
+                                      MediaQuery.of(context).size.width / 22.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          new FlatButton(
+                            padding: new EdgeInsets.all(0.0),
+                            onPressed: () {
+                              modeDialog(context);
+                            },
+                            child: new Container(
+                              height: MediaQuery.of(context).size.height / 18,
+                              width: MediaQuery.of(context).size.width / 4,
+                              alignment: Alignment.center,
+                              decoration: new BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: new BorderRadius.circular(60.0),
+                              ),
+                              child: new Text(
+                                "Mode : " + (mode == 1 ? "EndLess" : "Timed"),
+                                textAlign: TextAlign.center,
+                                style: new TextStyle(
+                                  color: Colors.white,
+                                  fontSize:
+                                      MediaQuery.of(context).size.width / 22.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SizedBox(), */
             ],
           ),
-        ),*/
-        body: Container(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Expanded(
-            child: Stack(
-              fit: StackFit.loose,
-              children: screenItems,
-            ),
-          ),
-          Container(
-            alignment: Alignment.center,
-            color: Color.fromRGBO(106, 94, 174, 1.0),
-            padding: EdgeInsets.symmetric(vertical: 5),
-            child: t,
-          ),
-          !start
-              ? Container(
-                  alignment: Alignment.center,
-                  color: Color.fromRGBO(106, 94, 173, 1.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: <Widget>[
-                      new FlatButton(
-                        padding: new EdgeInsets.all(0.0),
-                        onPressed: () {},
-                        child: new Container(
-                          height: MediaQuery.of(context).size.height / 18,
-                          width: MediaQuery.of(context).size.width / 4,
-                          alignment: Alignment.center,
-                          decoration: new BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: new BorderRadius.circular(60.0),
-                          ),
-                          child: new Text(
-                            "Theme : BoyGirl",
-                            textAlign: TextAlign.center,
-                            style: new TextStyle(
-                              color: Colors.white,
-                              fontSize:
-                                  MediaQuery.of(context).size.width / 22.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                      new FlatButton(
-                        padding: new EdgeInsets.all(0.0),
-                        onPressed: () {
-                          modeDialog(context);
-                        },
-                        child: new Container(
-                          height: MediaQuery.of(context).size.height / 18,
-                          width: MediaQuery.of(context).size.width / 4,
-                          alignment: Alignment.center,
-                          decoration: new BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: new BorderRadius.circular(60.0),
-                          ),
-                          child: new Text(
-                            "Mode : " + (mode == 1 ? "EndLess" : "Timed"),
-                            textAlign: TextAlign.center,
-                            style: new TextStyle(
-                              color: Colors.white,
-                              fontSize:
-                                  MediaQuery.of(context).size.width / 22.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : SizedBox(),
-          dataLength > 0 && !gameOver
-              ? Container(
-                  padding: EdgeInsets.all(10),
-                  color: new Color.fromRGBO(106, 94, 175, 1.0),
-                  alignment: Alignment.center,
-                  child: Text(
-                    "SCORE: $score",
-                    style: new TextStyle(
-                      color: Colors.white,
-                      fontSize: 28.0,
-                      letterSpacing: 3.5,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                )
-              : SizedBox()
-        ],
-      ),
-    ));
+        ));
   }
 }

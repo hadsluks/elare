@@ -17,7 +17,7 @@ class _GameTypesState extends State<GameTypes> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0.0,
-        backgroundColor: new Color.fromRGBO(106, 94, 175, 1.0),
+        backgroundColor: Colors.black,
       ),
       body: Container(
         color: new Color.fromRGBO(106, 94, 175, 1.0),

@@ -50,13 +50,13 @@ class _GameTimerState extends State<GameTimer> {
     if (tim != null) tim.cancel();
     if (fadeTim != null) fadeTim.cancel();
     op = true;
-    setState(() {});
+    if (this.mounted) setState(() {});
   }
 
   void start() {
     fadeTim = new Timer.periodic(new Duration(milliseconds: 500), (t) {
       op = !op;
-      if (fadeTim.isActive) setState(() {});
+      if (fadeTim.isActive && this.mounted) setState(() {});
     });
     tim = new Timer.periodic(new Duration(seconds: 1), (t) {
       if (gameMode == 1) {
@@ -65,14 +65,14 @@ class _GameTimerState extends State<GameTimer> {
           sec = 0;
           min++;
         }
-        if (tim.isActive) setState(() {});
+        if (tim.isActive && this.mounted) setState(() {});
       } else if (gameMode == 2) {
         if (sec == 0) {
           sec = 60;
           min--;
         }
         sec--;
-        if (tim.isActive) setState(() {});
+        if (tim.isActive && this.mounted) setState(() {});
         if (sec == 0 && min == 0) {
           widget.gameOver();
           this.stop();
@@ -103,7 +103,6 @@ class _GameTimerState extends State<GameTimer> {
 
   @override
   void dispose() {
-    // TODO: implement dispose
     super.dispose();
     if (tim != null) tim.cancel();
   }
