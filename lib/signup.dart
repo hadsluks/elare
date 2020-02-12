@@ -7,162 +7,238 @@ class SignUp extends StatefulWidget {
   _SignUpState createState() => _SignUpState();
 }
 
-class _SignUpState extends State<SignUp> {
-  String gender = "Male", name, country;
-  int age;
+class _SignUpState extends State<SignUp> with TickerProviderStateMixin {
+  AnimationController controller;
+  Animation<Offset> swipe, swipeUp;
+  Animation<double> opac;
+  int cI = 0;
+  String name, country, gender, age;
+  List<String> type = ["Name", "Age", "Country", "Gender"];
+  String desc(i) {
+    switch (i) {
+      case 0:
+        return "Enter Your Name";
+        break;
+      case 1:
+        return "Enter Age";
+        break;
+      case 2:
+        return "Enter your Country";
+        break;
+      case 3:
+        return "Select your Gender";
+        break;
+      default:
+        return "";
+    }
+  }
+
+  void save(dynamic s) {
+    switch (cI) {
+      case 0:
+        name = s;
+        break;
+      case 1:
+        age = s;
+        break;
+      case 2:
+        country = s;
+        break;
+      case 3:
+        gender = s;
+        break;
+      default:
+        break;
+    }
+  }
+
+  Widget typeOfInput(int i) {
+    if (i == 3)
+      return DropdownButton<String>(
+        items: ["Male", "Female"].map<DropdownMenuItem<String>>((i) {
+          return DropdownMenuItem<String>(
+            child: Text(i),
+            value: i,
+          );
+        }).toList(),
+        onChanged: (i) => save,
+        value: gender,
+      );
+    else
+      return TextFormField(
+        decoration: InputDecoration(
+          hintText: "Your " + type[cI] + " Here...",
+        ),
+        onChanged: (s) => save,
+      );
+  }
+
   var firestore = Firestore.instance;
   @override
+  void initState() {
+    super.initState();
+    gender = "Male";
+    controller = new AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+      reverseDuration: Duration(milliseconds: 1000),
+    );
+    swipe = new Tween<Offset>(
+      begin: Offset(0.0, 0.0),
+      end: Offset(1.0, 0.0),
+    ).animate(
+      new CurvedAnimation(
+        parent: controller,
+        curve: Curves.ease,
+      ),
+    );
+    swipe.addListener(() {
+      setState(() {
+        if (swipe.isCompleted) {
+          controller.reset();
+          cI += 1;
+          cI = cI % 4;
+        }
+      });
+    });
+    swipeUp = new Tween<Offset>(
+      begin: Offset(0.0, 0.0),
+      end: Offset(0.0, 1.5),
+    ).animate(
+      new CurvedAnimation(
+        parent: controller,
+        curve: Curves.ease,
+      ),
+    );
+    opac = new Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      new CurvedAnimation(
+        parent: controller,
+        curve: Curves.ease,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.only(
-            top: 20,
-            left: 10,
-            right: 10,
-          ),
-          child: Column(
-            children: <Widget>[
-              SizedBox(
-                height: MediaQuery.of(context).size.height / 12,
-              ),
-              Container(
-                child: TextFormField(
-                  decoration: InputDecoration(
-                    hintText: "Full Name",
-                  ),
-                  onChanged: (s) {
-                    name = s;
-                  },
-                ),
-                padding: EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    width: 1.0,
-                  ),
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(
-                height: MediaQuery.of(context).size.height / 15,
-              ),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      child: TextFormField(
-                        decoration: InputDecoration(
-                          hintText: "Age",
-                        ),
-                        onChanged: (s) {
-                          age = int.parse(s);
-                        },
-                        keyboardType: TextInputType.number,
-                      ),
-                      padding: EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          width: 1.0,
-                        ),
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  Spacer(
-                    flex: 1,
-                  ),
-                  Expanded(
-                    flex: 4,
-                    child: Container(
-                      child: TextFormField(
-                        decoration: InputDecoration(
-                          hintText: "Country",
-                        ),
-                        onChanged: (s) {
-                          country = s;
-                        },
-                      ),
-                      padding: EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          width: 1.0,
-                        ),
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                height: MediaQuery.of(context).size.height / 15,
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  child: DropdownButton<String>(
-                    items: ["Male", "Female"]
-                        .map<DropdownMenuItem<String>>(
-                          (s) => DropdownMenuItem<String>(
-                            child: Text(s),
-                            value: s,
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (s) {
-                      setState(() {
-                        gender = s;
-                      });
-                    },
-                    value: gender,
-                  ),
-                  padding: EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      width: 1.0,
-                    ),
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: MediaQuery.of(context).size.height / 15,
-              ),
-              RaisedButton(
-                onPressed: () {
-                  Navigator.of(context).pushNamed('interests');
-                },
-                child: Text(
-                  "Save",
-                  style: TextStyle(fontSize: 24, shadows: [
-                    Shadow(
-                      blurRadius: 1.0,
-                      offset: Offset(0, 2),
-                    ),
-                  ]),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          new SlideTransition(
+            position: swipeUp,
+            child: new FadeTransition(
+              opacity: opac,
+              child: Card(
+                color: Color(0xffffdab9),
+                margin: EdgeInsets.symmetric(
+                  horizontal: 10,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(10.0),
+                  side: BorderSide(
+                    width: 0.5,
+                  ),
                 ),
-                padding: EdgeInsets.all(5),
-                elevation: 10.0,
-                hoverColor: Colors.grey,
-                hoverElevation: 10.0,
-              )
+                elevation: 5.0,
+                child: Container(
+                  height: 150,
+                  width: MediaQuery.of(context).size.width - 50,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    children: <Widget>[
+                      Text(
+                        desc((cI + 1) % 4),
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 32,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(
+                        child: typeOfInput((cI + 1) % 4),
+                        width: MediaQuery.of(context).size.width / 1.5,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          new SlideTransition(
+            position: swipe,
+            child: Card(
+              color: Color(0xffffdab9),
+              margin: EdgeInsets.symmetric(
+                horizontal: 10,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
+                side: BorderSide(
+                  width: 0.5,
+                ),
+              ),
+              elevation: 5.0,
+              child: Container(
+                height: 150,
+                width: MediaQuery.of(context).size.width - 50,
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  children: <Widget>[
+                    Text(
+                      desc(cI),
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 32,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(
+                      child: typeOfInput(cI),
+                      width: MediaQuery.of(context).size.width / 1.5,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: <Widget>[
+              cI > 0
+                  ? Expanded(
+                      child: IconButton(
+                        icon: Icon(Icons.arrow_back),
+                        onPressed: () {
+                          controller.reverse();
+                        },
+                      ),
+                    )
+                  : Spacer(),
+              Expanded(
+                child: RaisedButton(
+                  onPressed: () {
+                    setState(() {});
+                    if (cI == 3) {
+                    } else
+                      controller.forward();
+                  },
+                ),
+              ),
+              Spacer(),
             ],
           ),
-        ),
+          SizedBox(
+            height: MediaQuery.of(context).size.height / 15,
+          ),
+        ],
       ),
     );
   }
 }
-
+/* */
 /* class _SignUpState extends State<SignUp> with TickerProviderStateMixin {
   Animation<double> swipe;
   AnimationController cont;

@@ -17,20 +17,15 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    tim = Timer.periodic(Duration(milliseconds: 2000), (t) {
+    tim = Timer(Duration(milliseconds: 100), () {
       f = !f;
-      if (elareBlinking == 1)
-        stopTimer();
-      else {
-        elareBlinking++;
-        setState(() {});
-      }
+      setState(() {});
     });
   }
 
   void stopTimer() {
     tim.cancel();
-    Navigator.of(context).pushNamed("signup");
+    //Navigator.of(context).pushNamed("signup");
   }
 
   @override
@@ -45,25 +40,27 @@ class _SplashScreenState extends State<SplashScreen>
           Align(
             alignment: Alignment.center,
             child: AnimatedCrossFade(
-              duration: Duration(milliseconds: 1500),
+              duration: Duration(milliseconds: 1000),
               crossFadeState:
                   f ? CrossFadeState.showFirst : CrossFadeState.showSecond,
               firstChild: Text(
                 "ELARE",
                 style: TextStyle(
-                  fontSize: 48,
+                  fontSize: 56,
+                  fontFamily: 'brandon',
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
+                  letterSpacing: 5,
                 ),
               ),
               secondChild: Text(
                 "ELARE",
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 56,
+                  fontFamily: 'brandon',
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
+                  letterSpacing: 5,
                 ),
               ),
             ),
@@ -73,3 +70,4 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
+

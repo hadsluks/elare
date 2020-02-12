@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -27,96 +29,85 @@ class _InterestsState extends State<Interests> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Padding(
-        padding: EdgeInsets.all(10),
-        child: Column(
-          children: <Widget>[
-            Spacer(
-              flex: 1,
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          SizedBox(
+            height: MediaQuery.of(context).size.height / 12,
+          ),
+          Text(
+            "Select Interest:",
+            style: TextStyle(
+              fontSize: 24,
             ),
-            Expanded(
-              child: Text(
-                "Select Interests",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 32,
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 4,
-              child: ListView.builder(
-                itemBuilder: (c, i) {
-                  return GestureDetector(
-                    child: Container(
-                      margin: EdgeInsets.all(5),
-                      child: Text(
-                        interests[i],
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 20,
+          ),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              children: interests
+                  .map<Widget>(
+                    (intr) => GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selected[interests.indexOf(intr)] =
+                              !selected[interests.indexOf(intr)];
+                        });
+                      },
+                      child: BackdropFilter(
+                        filter: selected[interests.indexOf(intr)]
+                            ? ImageFilter.blur(sigmaX: 0, sigmaY: 0)
+                            : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                        child: Container(
+                          margin: EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10.0),
+                            border: Border.all(
+                              color: selected[interests.indexOf(intr)]
+                                  ? Colors.green
+                                  : Colors.black,
+                              width:
+                                  selected[interests.indexOf(intr)] ? 1.5 : 0.2,
+                            ),
+                          ),
+                          foregroundDecoration:
+                              selected[interests.indexOf(intr)]
+                                  ? BoxDecoration(
+                                      color: Colors.grey.withOpacity(0.4),
+                                      borderRadius: BorderRadius.circular(10.0),
+                                      border: Border.all(
+                                        color: selected[interests.indexOf(intr)]
+                                            ? Colors.green
+                                            : Colors.black,
+                                        width: selected[interests.indexOf(intr)]
+                                            ? 1.5
+                                            : 0.2,
+                                      ),
+                                    )
+                                  : null,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: <Widget>[
+                              Image.asset(
+                                "assets/g1.jpg",
+                                fit: BoxFit.contain,
+                              ),
+                              Text(
+                                intr,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                ),
+                              )
+                            ],
+                          ),
                         ),
                       ),
-                      padding: EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: selected[i] ? Colors.grey : Colors.white,
-                      ),
                     ),
-                    onTap: () {
-                      setState(() {
-                        selected[i] = !selected[i];
-                      });
-                    },
-                  );
-                },
-                itemCount: interests.length,
-              ),
+                  )
+                  .toList(),
             ),
-            RaisedButton(
-              onPressed: () async {
-                List<String> intr = [];
-                for (int i = 0; i < 5; i++) {
-                  if (selected[i]) intr.add(id[i]);
-                }
-                print(intr);
-                Firestore.instance
-                    .collection('user')
-                    .where("userName", isEqualTo: "harsh")
-                    .getDocuments()
-                    .then((d) {
-                  var r = d.documents.first.reference;
-                  Firestore.instance.runTransaction((tx) async {
-                    tx.update(r, {'interest': intr});
-                  }).then((_) {
-                    Navigator.of(context).pushNamed('boygirl');
-                  });
-                });
-              },
-              child: Text(
-                "Save",
-                style: TextStyle(fontSize: 24, shadows: [
-                  Shadow(
-                    blurRadius: 1.0,
-                    offset: Offset(0, 2),
-                  ),
-                ]),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: EdgeInsets.all(5),
-              elevation: 10.0,
-              hoverColor: Colors.grey,
-              hoverElevation: 10.0,
-            ),
-            Spacer(
-              flex: 1,
-            ),
-          ],
-        ),
+          )
+        ],
       ),
     );
   }
