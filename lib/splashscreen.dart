@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:elare/variables.dart';
 import 'package:flare_splash_screen/flare_splash_screen.dart' as spl;
 import 'package:flutter/material.dart';
 
@@ -17,15 +18,20 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    initialiseThings();
+    getInterests();
     tim = Timer(Duration(milliseconds: 100), () {
       f = !f;
       setState(() {});
+      stopTimer();
     });
   }
 
-  void stopTimer() {
+  void stopTimer() async {
     tim.cancel();
-    //Navigator.of(context).pushNamed("signup");
+    await Future.delayed(Duration(milliseconds: 2000));
+    Navigator.of(context).pushNamed("home");
+    print(interests);
   }
 
   @override
@@ -70,4 +76,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-
